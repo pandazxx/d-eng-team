@@ -38,11 +38,20 @@ Manage an AI engineering team with:
 
 # Roles
 
+- PO
+  * **Input**: user input
+  * **Output**: user stories, requirements, acceptance criterias.
 - Architect
   * **Scope**: project level
-
+  * **Input**: requirements, user stories
+  * **Output**: Highlevel design, instructions to **Developer** and **QA**
 - Developer
   * **Scope**: module level
+- QA
+- Librarian
+
+
+
 
 
 # Notes
