@@ -1,6 +1,12 @@
 # d-eng-team
 An AI Agent plugin to mange software engineering team AI workflow
 
+# Glossary
+
+- **the plugin**: this plugin
+- **project**: the repo/project that installs this plugin
+- **user**: the human who working on the **project**
+- **the workflow**: the way that this plugin works.
 
 # Initiative
 
@@ -33,12 +39,12 @@ Manage an AI engineering team with:
     3. For cross module dependencies and interactions, refer to target module's **Detail design**
     4. Update **Module design** and **Detail design** of the module it's working on
     5. If modification / support from other module is required, trigger **architect** to coordinate.
-  * A knowledge base with  index. Agent can get knowledge on demand. For example, title: Bug in foo() function in base library, link to a document that describe this bug in detail and the solution to avoid it. Agent only keep the title in the context, only during troubleshooting or using this function will the agent load the detail into the context.
+  * A knowledge base with index. Agent can get knowledge on demand. For example, title: Bug in foo() function in base library, link to a document that describe this bug in detail and the solution to avoid it. Agent only keep the title in the context, only during troubleshooting or using this function will the agent load the detail into the context.
 
 
 # Roles
 
-- PO
+- Business analyst
   * **Input**: user input
   * **Output**: user stories, requirements, acceptance criterias.
 - Architect
@@ -49,7 +55,17 @@ Manage an AI engineering team with:
   * **Scope**: module level
 - QA
 - Librarian
+  * Organize the document base
 
+
+# Plugin structure
+
+- `document-structure.md`: Define the document structure for the project that use this plugin. `/onboarding` skill will install reference to this document to the project's owned agent instruction file, such as `CLAUDE.md`/`AGENTS.md`.
+- `skills/`
+  * `onboarding/SKILL.md`: A skill to help the project to initialize with this plugin. Including the agent instructions injection.
+- `agents/`
+  * `ba`: Business analyst, focus on understanding user's requirements. Output user stories, requirements, acceptance criterias.
+  * `architect`: The core of this workflow. It takes in requirements, user stories, discuss with the user, output the highlevel design.
 
 
 
