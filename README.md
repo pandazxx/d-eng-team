@@ -4,24 +4,24 @@ An AI Agent plugin to mange software engineering team AI workflow
 # Glossary
 
 - **the plugin**: this plugin
-- **project**: the repo/project that installs this plugin
-- **user**: the human who working on the **project**
+- **the project** / **target project**: the repo/project that installs this plugin
+- **the user**: the human who working on the **project**
 - **the workflow**: the way that this plugin works.
 
 # Initiative
 
-Manage an AI engineering team with:
+Manage an AI engineering team to target project, with:
 
 - Document as memory.
 - Different roles with separate sessions, hence separated contexts and memories as well.
-- Agent with high turn over rate.
+- Agent with high turn over rate, don't just rely on the session / context memory.
 
 
 # Ideology
 
 - Skill **onboarding**: gets the repo ready for this workflow, ensures that the `AGENTS.md`/`CLAUDE.md` contains necessary intruction for this workflow
 - Document structure:
-  * Three level of documents:
+  * Three level of design documents:
     - **Highlevel design**:
       * Key business flow
       * Modules boundaries and relationships
@@ -42,6 +42,24 @@ Manage an AI engineering team with:
   * A knowledge base with index. Agent can get knowledge on demand. For example, title: Bug in foo() function in base library, link to a document that describe this bug in detail and the solution to avoid it. Agent only keep the title in the context, only during troubleshooting or using this function will the agent load the detail into the context.
 
 
+# Documents
+
+
+
+| Document            | Owner            | Descriptions                                                                                                  |
+|---------------------|------------------|---------------------------------------------------------------------------------------------------------------|
+| Initiative          | Business partner | Target and end-goal of the project. A north star of the project.                                              |
+| Use cases           | Business analyst | - Use cases for business scenarios<br>- Includes acceptance criterias<br>- Includes the exceptional scenarios |
+| Detail requirements | Business analyst | Supplementary document of **Use cases**. Provide detail requirement of Use cases                              |
+| ADR                 | Architect        | - Architecture decision record, record every key architecture decsisons                                       |
+| Highlevel design    | Architect        | - Highlevel design of the project<br>- Focus on highlevel flow and the boundry of modules                     |
+| Module design       | Engineer         | - Detail logic of the module                                                                                  |
+| Detail design       | Engineer         | - Interface contract of the module                                                                            |
+| Test cases          | QA               | - Test case<br>- User test cases and instructions                                                             |
+| Manuals             | Architect        | - `Usage.md`<br>- `User Manuals.md`                                                                           |
+| Index               | Librarian        | - index of all documents<br>- provide index for agent to reference                                            |
+
+
 # Roles
 
 - Business analyst
@@ -57,6 +75,47 @@ Manage an AI engineering team with:
 - Librarian
   * Organize the document base
 
+
+| role             | is orchestrator | counterparts                    | Document scope                                           |
+|------------------|-----------------|---------------------------------|----------------------------------------------------------|
+| Business partner | No              | Business analyst                | Initiative                                               |
+| Business analyst | No              | Architect                       | Highlevel requirement<br>Detail requirement<br>Use cases |
+| Architect        | Yes             | Everyone                        | Highlevel design                                         |
+| Engineer         | No              | Architect, QA, Business analyst | Module design<br>Detail design                           |
+| QA               | No              | Engineer, Business analyst      | Module design<br>Detail design<br>Test cases             |
+| Librarian        | Yes             | Everyone                        | All                                                      |
+
+
+# Orchestration
+
+**Orchestrator**s can command other roles which might be running in other session/agents. There should be a contract between the commander and executor.
+
+## Request format
+A prompt
+```
+From: <from agent name>
+To: <target agent name>
+---
+<request prompt body>
+```
+
+## Response format
+```
+From: <from agent name>
+To: <to agent name>
+Status: <status of the prompt>
+---
+<respond body>
+```
+
+- **Status**:
+  * **Done**: job done. The respond body is the result of the work done.
+  * **Stuck**: job stuck by insufficient information or issues cannot be fixed within the scope of current agent. The requestor to clarify / coordinate and fix the issue / escalate to user. Once issue fixed, the requestor should request the target to continue. In this status, the respond should be the reason of the blockage.
+
+
+The plugin should provide skills for both requestor and the target.
+- For requestor: request format, execute prompt on different agent session
+- For target: response format
 
 # Plugin structure
 
