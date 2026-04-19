@@ -1,27 +1,27 @@
 # d-eng-team
-An AI Agent plugin to mange software engineering team AI workflow
+An AI Agent plugin to manage software engineering team AI workflow
 
 # Glossary
 
 - **the plugin**: this plugin
 - **the project** / **target project**: the repo/project that installs this plugin
-- **the user**: the human who working on the **project**
+- **the user**: the human who is working on the **project**
 - **the workflow**: the way that this plugin works.
 
 # Initiative
 
-Manage an AI engineering team to target project, with:
+Manage an AI engineering team for the target project, with:
 
 - Document as memory.
 - Different roles with separate sessions, hence separated contexts and memories as well.
-- Agent with high turn over rate, don't just rely on the session / context memory.
+- Agents with a high turnover rate, don't just rely on the session / context memory.
 
 
 # Ideology
 
-- Skill **onboarding**: gets the repo ready for this workflow, ensures that the `AGENTS.md`/`CLAUDE.md` contains necessary intruction for this workflow
+- Skill **onboarding**: gets the repo ready for this workflow, ensures that the `AGENTS.md`/`CLAUDE.md` contains necessary instruction for this workflow
 - Document structure:
-  * Three level of design documents:
+  * Three levels of design documents:
     - **Highlevel design**:
       * Key business flow
       * Modules boundaries and relationships
@@ -33,8 +33,8 @@ Manage an AI engineering team to target project, with:
       * detail flow chart
       * Exceptional handling
       * Module _external_ usage, for those who works with this module to reference.
-  * An intruction / indexing system for agent to reference. A new agent without any context and memory, can follow this trail to understand the project and start to work on specific task with minimum effort/context.
-    1. When a new agent get a problem statement, it read the **Highlevel design** to understand the project and which module to work with.
+  * An instruction / indexing system for agent to reference. A new agent without any context and memory, can follow this trail to understand the project and start to work on specific task with minimum effort/context.
+    1. When a new agent gets a problem statement, it reads the **Highlevel design** to understand the project and which module to work with.
     2. Read the **Module design** to understand further and work on the solution
     3. For cross module dependencies and interactions, refer to target module's **Detail design**
     4. Update **Module design** and **Detail design** of the module it's working on
@@ -49,10 +49,10 @@ Manage an AI engineering team to target project, with:
 | Document            | Owner            | Descriptions                                                                                                  |
 |---------------------|------------------|---------------------------------------------------------------------------------------------------------------|
 | Initiative          | Business partner | Target and end-goal of the project. A north star of the project.                                              |
-| Use cases           | Business analyst | - Use cases for business scenarios<br>- Includes acceptance criterias<br>- Includes the exceptional scenarios |
+| Use cases           | Business analyst | - Use cases for business scenarios<br>- Includes acceptance criteria<br>- Includes the exceptional scenarios |
 | Detail requirements | Business analyst | Supplementary document of **Use cases**. Provide detail requirement of Use cases                              |
-| ADR                 | Architect        | - Architecture decision record, record every key architecture decsisons                                       |
-| Highlevel design    | Architect        | - Highlevel design of the project<br>- Focus on highlevel flow and the boundry of modules                     |
+| ADR                 | Architect        | - Architecture decision record, record every key architecture decisions                                       |
+| Highlevel design    | Architect        | - Highlevel design of the project<br>- Focus on highlevel flow and the boundary of modules                     |
 | Module design       | Engineer         | - Detail logic of the module                                                                                  |
 | Detail design       | Engineer         | - Interface contract of the module                                                                            |
 | Test cases          | QA               | - Test case<br>- User test cases and instructions                                                             |
@@ -64,7 +64,7 @@ Manage an AI engineering team to target project, with:
 
 - Business analyst
   * **Input**: user input
-  * **Output**: user stories, requirements, acceptance criterias.
+  * **Output**: user stories, requirements, acceptance criteria.
 - Architect
   * **Scope**: project level
   * **Input**: requirements, user stories
@@ -109,8 +109,8 @@ Status: <status of the prompt>
 ```
 
 - **Status**:
-  * **Done**: job done. The respond body is the result of the work done.
-  * **Stuck**: job stuck by insufficient information or issues cannot be fixed within the scope of current agent. The requestor to clarify / coordinate and fix the issue / escalate to user. Once issue fixed, the requestor should request the target to continue. In this status, the respond should be the reason of the blockage.
+  * **Done**: job done. The response body is the result of the work done.
+  * **Stuck**: job stuck by insufficient information or issues cannot be fixed within the scope of current agent. The requestor should clarify / coordinate and fix the issue / escalate to user. Once issue fixed, the requestor should request the target to continue. In this status, the response should be the reason of the blockage.
 
 
 The plugin should provide skills for both requestor and the target.
@@ -123,7 +123,7 @@ The plugin should provide skills for both requestor and the target.
 - `skills/`
   * `onboarding/SKILL.md`: A skill to help the project to initialize with this plugin. Including the agent instructions injection.
 - `agents/`
-  * `ba`: Business analyst, focus on understanding user's requirements. Output user stories, requirements, acceptance criterias.
+  * `ba`: Business analyst, focus on understanding user's requirements. Output user stories, requirements, acceptance criteria.
   * `architect`: The core of this workflow. It takes in requirements, user stories, discuss with the user, output the highlevel design.
 
 
