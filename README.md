@@ -77,7 +77,7 @@ Manage an AI engineering team for the target project, with:
 
 
 | role             | is orchestrator | counterparts                    | Document scope                                           |
-|------------------|-----------------|---------------------------------|----------------------------------------------------------|
+| ---------------- | --------------- | ------------------------------- | -------------------------------------------------------- |
 | Business partner | No              | Business analyst                | Initiative                                               |
 | Business analyst | No              | Architect                       | Highlevel requirement<br>Detail requirement<br>Use cases |
 | Architect        | Yes             | Everyone                        | Highlevel design                                         |
@@ -117,7 +117,18 @@ The plugin should provide skills for both requestor and the target.
 - For requestor: request format, execute prompt on different agent session
 - For target: response format
 
-# Plugin structure
+# How this plugin works
+
+## Installation
+
+- This plugin follows the standard `claude-code` plugin mechanism.
+- This plugin provides one **onboarding** skill to do the necessary installation to the project. _TBD:_ plugin name and can this skill be ran during the plugin installation.
+- This plugin provides one **update** skill to update the plugin. Includes pull the latest plugin artifacts and update the project. _TBD:_ plugin name
+  
+
+## Plugin structure
+
+_This whole section TBD_
 
 - `document-structure.md`: Define the document structure for the project that use this plugin. `/onboarding` skill will install reference to this document to the project's owned agent instruction file, such as `CLAUDE.md`/`AGENTS.md`.
 - `skills/`
