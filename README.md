@@ -119,23 +119,93 @@ The plugin should provide skills for both requestor and the target.
 
 # How this plugin works
 
+## Plugin mechanism
+
+This plugin is implemented as **Claude Code skills + `CLAUDE.md` injection**. No npm, no CLI, no separate installer. Claude Code is the runtime.
+
+Skills are markdown files (`.claude/skills/<name>.md`) invoked as `/skill-name` inside Claude Code. The plugin ships role skills (`/ba`, `/architect`, `/developer`, `/qa`, `/librarian`) and one lifecycle skill (`/onboarding`).
+
 ## Installation
 
-- This plugin follows the standard `claude-code` plugin mechanism.
-- This plugin provides one **onboarding** skill to do the necessary installation to the project. _TBD:_ plugin name and can this skill be ran during the plugin installation.
-- This plugin provides one **update** skill to update the plugin. Includes pull the latest plugin artifacts and update the project. _TBD:_ plugin name
-  
+The entire plugin is distributed as a **single self-contained skill file**. To install:
+
+```bash
+curl -o .claude/skills/onboarding.md https://raw.githubusercontent.com/<org>/d-eng-team/main/onboarding.md
+```
+
+Then inside Claude Code:
+
+```
+/onboarding
+```
+
+That's it. The `/onboarding` skill bootstraps everything else — no second network call required. All role skill templates and document templates are embedded in the single file. Claude materialises them locally on first run.
+
+## The `/onboarding` skill
+
+`/onboarding` is the single entry point for the full plugin lifecycle:
+
+| Mode | Command | Behaviour |
+|---|---|---|
+| Auto-detect | `/onboarding` | Install if fresh project, upgrade if already installed |
+| Install | `/onboarding install` | Force full install |
+| Upgrade | `/onboarding upgrade` | Overwrite plugin-owned files, preserve user content |
+| Doctor | `/onboarding doctor` | Report only — no writes |
+
+### Doctor as the foundation
+
+Doctor defines the canonical "correctly installed" state. Install and upgrade both build on it:
+
+- **Install** = doctor → create everything *missing*
+- **Upgrade** = doctor → overwrite everything *outdated*
+- **Doctor** = doctor → report only
+
+### Doctor checklist
+
+| Check | Expected state | Owned by |
+|---|---|---|
+| Role skill files | `.claude/skills/{ba,architect,developer,qa,librarian}.md` exist | Plugin |
+| Doc folders | `docs/highlevel/`, `docs/modules/`, `docs/detail/`, `docs/templates/`, `team/kb/` exist | Plugin |
+| `CLAUDE.md` block | `<!-- d-eng-team -->` block present and at current version | Plugin |
+| KB index | `team/kb/index.md` exists | Plugin (scaffold only) |
+| Document templates | One template per document type in `docs/templates/` | Plugin |
+
+### Idempotency rules
+
+| File category | Install | Upgrade |
+|---|---|---|
+| Role skill files (`.claude/skills/`) | Write | Always overwrite |
+| Document templates (`docs/templates/`) | Write | Overwrite if unchanged, prompt if modified |
+| `CLAUDE.md` block | Append | Diff and update block in-place |
+| KB index (`team/kb/index.md`) | Scaffold empty | Never touch |
+| User design docs (`docs/`, `team/`) | Never touch | Never touch |
 
 ## Plugin structure
 
-_This whole section TBD_
+```
+onboarding.md          ← single curl target; contains all embedded templates
+```
 
-- `document-structure.md`: Define the document structure for the project that use this plugin. `/onboarding` skill will install reference to this document to the project's owned agent instruction file, such as `CLAUDE.md`/`AGENTS.md`.
-- `skills/`
-  * `onboarding/SKILL.md`: A skill to help the project to initialize with this plugin. Including the agent instructions injection.
-- `agents/`
-  * `ba`: Business analyst, focus on understanding user's requirements. Output user stories, requirements, acceptance criteria.
-  * `architect`: The core of this workflow. It takes in requirements, user stories, discuss with the user, output the highlevel design.
+After `/onboarding install`, the project gains:
+
+```
+.claude/
+  skills/
+    onboarding.md      ← lifecycle skill (install / upgrade / doctor)
+    ba.md              ← Business Analyst role skill
+    architect.md       ← Architect role skill
+    developer.md       ← Developer role skill
+    qa.md              ← QA role skill
+    librarian.md       ← Librarian role skill
+docs/
+  templates/           ← one template per document type
+  highlevel/
+  modules/
+  detail/
+team/
+  kb/
+    index.md           ← knowledge base index
+```
 
 
 
