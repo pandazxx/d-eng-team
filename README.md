@@ -74,9 +74,15 @@ Manage an AI engineering team for the target project, with:
 - Architect
   * **Scope**: project level
   * **Input**: requirements and user stories from BA — **or direct user input**
-  * **Output**: Highlevel design, ADRs, task assignments to Developer and QA
   * **Note**: Architect is also a direct user entry point. The user may bring a problem statement or feature request straight to Architect without going through PO/BA. If requirements are clear and actionable, Architect proceeds directly. If requirements are unclear or incomplete, Architect always delegates to PO/BA first — it never asks the user for clarification itself.
-  * **Task assignment**: After producing the Highlevel design, Architect breaks it down into module-level tasks and spawns a Developer per task. Each task assignment includes: module name, task description, relevant design doc references, and any cross-module constraints.
+  * **Phase 1 — Design**:
+    - Output: Highlevel design, ADRs
+    - On completion: fires `solution-ready` event to Librarian, then stops and awaits user review
+    - The user reviews the design and may request changes. Architect revises and fires `solution-ready` again. This loop continues until the user is satisfied.
+  * **Phase 2 — Implementation** (explicit user trigger only):
+    - Begins only when the user explicitly instructs Architect to proceed
+    - Architect reads the approved Highlevel design, breaks it into module-level tasks, and spawns one Developer per task
+    - Each task assignment includes: module name, task description, design doc references, and cross-module constraints
 - Developer
   * **Scope**: module level — one Developer per assigned task
   * **Input**: task assignment from Architect (module, task, design doc references, constraints)
@@ -92,7 +98,7 @@ Manage an AI engineering team for the target project, with:
   * **Behaviour**: event-driven workflow coordinator. Each lifecycle event tells Librarian what just completed; Librarian indexes the new documents and decides whether to advance the workflow by spawning the next orchestrator.
   * **Events**:
     - `requirements-ready` — BA has produced requirements. Librarian indexes them, then spawns Architect to begin design.
-    - `solution-ready` — Architect has produced the Highlevel design. Librarian indexes it, then spawns Architect (task assignment phase) to assign module tasks to Developers.
+    - `solution-ready` — Architect has produced or revised the Highlevel design. Librarian indexes it and notifies the user to review. No automatic progression — implementation begins only on explicit user instruction.
     - `development-done` — Developer has completed a module. Librarian indexes updated design docs, then spawns QA for that module.
     - `test-cases-ready` — QA has completed test cases. Librarian indexes them and reports status.
   * **Triggering Librarian**: each orchestrator spawns Librarian as its final step, passing the event name and a summary of what was produced.
@@ -106,6 +112,40 @@ Manage an AI engineering team for the target project, with:
 | Developer     | No              | Architect, QA            | Module design<br>Detail design                           |
 | QA            | No              | Developer, BA            | Test cases                                               |
 | Librarian     | Yes             | Everyone                 | Index                                                    |
+
+
+# End-to-end workflow
+
+```
+User
+ │
+ ├─(requirements unclear)─► /po  →  PO spawns BA  →  BA produces requirements
+ │                                  └─ fires: requirements-ready
+ │                                       └─ Librarian indexes  →  spawns Architect (design phase)
+ │
+ └─(requirements clear)──► /architect
+                              │
+                         [Design phase]
+                              Architect produces Highlevel design + ADRs
+                              └─ fires: solution-ready
+                                   └─ Librarian indexes  →  notifies user to review
+                                        │
+                                   ┌────┴────────────────────────┐
+                                   │  User reviews design         │
+                                   │  ├─ changes requested  ──►  Architect revises
+                                   │  │                           └─ fires: solution-ready (loop)
+                                   │  └─ satisfied  ─────────►  User: "proceed with implementation"
+                                   └─────────────────────────────┘
+                                        │
+                         [Implementation phase — explicit user trigger]
+                              Architect assigns module tasks to Developers (one per module)
+                              └─ each Developer completes task
+                                   └─ fires: development-done
+                                        └─ Librarian indexes  →  spawns QA for that module
+                                             └─ QA produces test cases
+                                                  └─ fires: test-cases-ready
+                                                       └─ Librarian indexes  →  notifies user
+```
 
 
 # Session architecture
