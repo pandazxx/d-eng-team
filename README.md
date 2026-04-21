@@ -49,6 +49,8 @@ Manage an AI engineering team for the target project, with:
 | Document            | Owner            | Descriptions                                                                                                  |
 |---------------------|------------------|---------------------------------------------------------------------------------------------------------------|
 | Initiative          | Product Owner    | Target and end-goal of the project. A north star of the project.                                              |
+| Prioritised backlog | Product Owner    | Ordered list of features and requirements by business priority                                                |
+| Business constraints | Product Owner   | Non-functional constraints from a business perspective (budget, timeline, compliance, etc.)                   |
 | Use cases           | Business analyst | - Use cases for business scenarios<br>- Includes acceptance criteria<br>- Includes the exceptional scenarios |
 | Detail requirements | Business analyst | Supplementary document of **Use cases**. Provide detail requirement of Use cases                              |
 | ADR                 | Architect        | - Architecture decision record, record every key architecture decisions                                       |
@@ -71,6 +73,7 @@ Manage an AI engineering team for the target project, with:
   * **Scope**: requirements level
   * **Input**: Initiative and direction from Product Owner, or direct user input
   * **Output**: use cases, acceptance criteria, detail requirements
+  * On completion: fires `requirements-ready` event
 - Architect
   * **Scope**: project level
   * **Input**: requirements and user stories from BA — **or direct user input**
@@ -86,11 +89,13 @@ Manage an AI engineering team for the target project, with:
 - Developer
   * **Scope**: module level — one Developer per assigned task
   * **Input**: task assignment from Architect (module, task, design doc references, constraints)
-  * **Output**: implementation, updated Module design and Detail design, report back to Architect
+  * **Output**: implementation, updated Module design and Detail design
+  * On completion: fires `development-done` event
 - QA
   * **Scope**: module level
-  * **Input**: implementation from Developer, acceptance criteria from BA
+  * **Input**: reads Module design and Detail design from `docs/modules/` and `docs/detail/`; reads acceptance criteria from BA's Use cases document in `docs/`
   * **Output**: test cases, test results, bug reports
+  * On completion: fires `test-cases-ready` event
 - Librarian
   * **Scope**: project level
   * **Trigger**: lifecycle events — not called directly by other roles or the user
@@ -101,7 +106,7 @@ Manage an AI engineering team for the target project, with:
     - `solution-ready` — Architect has produced or revised the Highlevel design. Librarian indexes it and notifies the user to review. No automatic progression — implementation begins only on explicit user instruction.
     - `development-done` — Developer has completed a module. Librarian indexes updated design docs, then spawns QA for that module.
     - `test-cases-ready` — QA has completed test cases. Librarian indexes them and reports status.
-  * **Triggering Librarian**: each orchestrator spawns Librarian as its final step, passing the event name and a summary of what was produced.
+  * **Triggering Librarian**: any role may fire an event on completion — event firing is distinct from process spawning and requires no orchestrator privilege. Librarian reacts to the event independently.
 
 
 | role          | is orchestrator | counterparts             | Document scope                                           |
