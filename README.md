@@ -87,8 +87,15 @@ Manage an AI engineering team for the target project, with:
   * **Output**: test cases, test results, bug reports
 - Librarian
   * **Scope**: project level
-  * **Input**: triggered by any role or user after significant document changes
-  * **Output**: updated Index
+  * **Trigger**: lifecycle events — not called directly by other roles or the user
+  * **Output**: updated Index, and may spawn other orchestrators to advance the workflow
+  * **Behaviour**: event-driven workflow coordinator. Each lifecycle event tells Librarian what just completed; Librarian indexes the new documents and decides whether to advance the workflow by spawning the next orchestrator.
+  * **Events**:
+    - `requirements-ready` — BA has produced requirements. Librarian indexes them, then spawns Architect to begin design.
+    - `solution-ready` — Architect has produced the Highlevel design. Librarian indexes it, then spawns Architect (task assignment phase) to assign module tasks to Developers.
+    - `development-done` — Developer has completed a module. Librarian indexes updated design docs, then spawns QA for that module.
+    - `test-cases-ready` — QA has completed test cases. Librarian indexes them and reports status.
+  * **Triggering Librarian**: each orchestrator spawns Librarian as its final step, passing the event name and a summary of what was produced.
 
 
 | role          | is orchestrator | counterparts             | Document scope                                           |
@@ -122,12 +129,18 @@ The response file is the callee's full reply, written in the response format bel
 
 ## Nesting rule
 
-**Only orchestrators may spawn new processes.** When one orchestrator calls another, the callee runs in non-orchestrator mode and cannot spawn further. This caps nesting at depth 2.
+Spawning is governed by two tiers:
 
-The caller enforces this by appending one line to the system prompt:
+**Tier 1 — Librarian (event-driven top-level coordinator)**
+Librarian may spawn any role including full orchestrators. It sits above the normal call hierarchy, activated only by lifecycle events. Because it is never called by another agent, it cannot create cycles.
+
+**Tier 2 — All other orchestrators (PO, Architect)**
+When a non-Librarian orchestrator calls another orchestrator, the callee runs in non-orchestrator mode and cannot spawn further. This caps that branch at depth 2.
+
+The caller enforces non-orchestrator mode by appending to the system prompt:
 
 ```bash
-ROLE_SKILL=$(cat .claude/skills/librarian.md)
+ROLE_SKILL=$(cat .claude/skills/architect.md)
 
 claude -p "..." \
   --system-prompt "${ROLE_SKILL}
@@ -139,22 +152,27 @@ Effective call graph:
 
 ```
 User
- └── Product Owner (orchestrator) ← full requirements flow
-      ├── BA         (non-orchestrator)
-      └── Architect  (called as non-orchestrator)
+ └── Product Owner (orchestrator) ← requirements flow
+      ├── BA              (non-orchestrator)
+      └── Architect       (called as non-orchestrator)
+           └── [no further spawning]
 
 User
  └── Architect (orchestrator) ← direct entry point
-      ├── Developer  (non-orchestrator)
-      ├── QA         (non-orchestrator)
-      ├── BA         (non-orchestrator)
-      └── Librarian  (called as non-orchestrator)
+      ├── Developer       (non-orchestrator)
+      ├── QA              (non-orchestrator)
+      └── BA              (non-orchestrator)
 
-User
- └── Librarian (orchestrator, user-initiated)
-      ├── Architect  (called as non-orchestrator)
-      └── Developer  (called as non-orchestrator)
+[Event] ── requirements-ready / solution-ready / development-done / test-cases-ready
+ └── Librarian (event-driven, tier-1 orchestrator)
+      ├── Architect       (full orchestrator)
+      │    ├── Developer  (non-orchestrator)
+      │    └── QA         (non-orchestrator)
+      └── Product Owner   (full orchestrator)
+           └── BA         (non-orchestrator)
 ```
+
+Max effective depth: Event → Librarian → Orchestrator → Non-orchestrator (3 levels, always bounded).
 
 # Orchestration
 
