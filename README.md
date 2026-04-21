@@ -25,19 +25,19 @@ Manage an AI engineering team for the target project, with:
     - **Highlevel design**:
       * Key business flow
       * Modules boundaries and relationships
-    - **Module design**:
+    - **Internal design**:
       * Module logical design
       * Module _internal_ usage, for who works on this module to reference.
-    - **Detail design**:
+    - **Interface design**:
       * API spec
       * detail flow chart
       * Exceptional handling
       * Module _external_ usage, for those who works with this module to reference.
   * An instruction / indexing system for agent to reference. A new agent without any context and memory, can follow this trail to understand the project and start to work on specific task with minimum effort/context.
     1. When a new agent gets a problem statement, it reads the **Highlevel design** to understand the project and which module to work with.
-    2. Read the **Module design** to understand further and work on the solution
-    3. For cross module dependencies and interactions, refer to target module's **Detail design**
-    4. Update **Module design** and **Detail design** of the module it's working on
+    2. Read the **Internal design** to understand further and work on the solution
+    3. For cross module dependencies and interactions, refer to target module's **Interface design**
+    4. Update **Internal design** and **Interface design** of the module it's working on
     5. If modification / support from other module is required, trigger **architect** to coordinate.
   * A knowledge base with index. Agent can get knowledge on demand. For example, title: Bug in foo() function in base library, link to a document that describe this bug in detail and the solution to avoid it. Agent only keep the title in the context, only during troubleshooting or using this function will the agent load the detail into the context.
 
@@ -55,8 +55,8 @@ Manage an AI engineering team for the target project, with:
 | Detail requirements | Business analyst | Supplementary document of **Use cases**. Provide detail requirement of Use cases                              |
 | ADR                 | Architect        | - Architecture decision record, record every key architecture decisions                                       |
 | Highlevel design    | Architect        | - Highlevel design of the project<br>- Focus on highlevel flow and the boundary of modules                     |
-| Module design       | Engineer         | - Detail logic of the module                                                                                  |
-| Detail design       | Engineer         | - Interface contract of the module                                                                            |
+| Internal design     | Engineer         | - Detail logic of the module<br>- Internal usage reference for engineers working on this module               |
+| Interface design    | Engineer         | - API spec, flow charts, exception handling<br>- External usage reference for engineers working with this module |
 | Test cases          | QA               | - Test case<br>- User test cases and instructions                                                             |
 | Manuals             | Architect        | - `Usage.md`<br>- `User Manuals.md`                                                                           |
 | Index               | Librarian        | - index of all documents<br>- provide index for agent to reference                                            |
@@ -89,12 +89,12 @@ Manage an AI engineering team for the target project, with:
 - Developer
   * **Scope**: module level — one Developer per assigned task
   * **Input**: task assignment from Architect (module, task, design doc references, constraints)
-  * **Output**: implementation, updated Module design and Detail design
+  * **Output**: implementation, updated Internal design and Interface design
   * On completion: fires `development-done` event
 - QA
   * **Scope**: module level
-  * **Input**: reads Module design and Detail design from `docs/modules/` and `docs/detail/`; reads acceptance criteria from BA's Use cases document in `docs/`
-  * **Output**: test cases, test results, bug reports
+  * **Input**: reads Internal design and Interface design from `docs/internal/` and `docs/interface/`; reads acceptance criteria from BA's Use cases document in `docs/`
+  * **Output**: test cases, test results, GitHub issues (for bugs)
   * On completion: fires `test-cases-ready` event
 - Librarian
   * **Scope**: project level
@@ -114,7 +114,7 @@ Manage an AI engineering team for the target project, with:
 | Product Owner | Yes             | BA, Architect            | Initiative                                               |
 | BA            | No              | Product Owner, Architect | Use cases<br>Detail requirements                         |
 | Architect     | Yes             | Everyone                 | Highlevel design<br>ADR<br>Manuals                       |
-| Developer     | No              | Architect, QA            | Module design<br>Detail design                           |
+| Developer     | No              | Architect, QA            | Internal design<br>Interface design                           |
 | QA            | No              | Developer, BA            | Test cases                                               |
 | Librarian     | Yes             | Everyone                 | Index                                                    |
 
@@ -235,7 +235,7 @@ Module: <module name>
 Task: <what to implement>
 Design refs:
   - docs/highlevel/<file>.md
-  - docs/modules/<module>.md
+  - docs/internal/<module>.md
 Constraints: <cross-module dependencies or interface contracts to respect>
 
 <additional context>
@@ -313,7 +313,7 @@ Doctor defines the canonical "correctly installed" state. Install and upgrade bo
 | Check | Expected state | Owned by |
 |---|---|---|
 | Role skill files | `.claude/skills/{ba,architect,developer,qa,librarian}.md` exist | Plugin |
-| Doc folders | `docs/highlevel/`, `docs/modules/`, `docs/detail/`, `docs/templates/`, `team/kb/` exist | Plugin |
+| Doc folders | `docs/highlevel/`, `docs/internal/`, `docs/interface/`, `docs/templates/`, `team/kb/` exist | Plugin |
 | `CLAUDE.md` block | `<!-- d-eng-team -->` block present and at current version | Plugin |
 | KB index | `team/kb/index.md` exists | Plugin (scaffold only) |
 | Document templates | One template per document type in `docs/templates/` | Plugin |
@@ -348,8 +348,8 @@ After `/onboarding install`, the project gains:
 docs/
   templates/           ← one template per document type
   highlevel/
-  modules/
-  detail/
+  internal/
+  interface/
 team/
   kb/
     index.md           ← knowledge base index
