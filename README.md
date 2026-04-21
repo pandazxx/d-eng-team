@@ -75,7 +75,7 @@ Manage an AI engineering team for the target project, with:
   * **Scope**: project level
   * **Input**: requirements and user stories from BA — **or direct user input**
   * **Output**: Highlevel design, ADRs, instructions to **Developer** and **QA**
-  * **Note**: Architect is also a direct user entry point. The user may bring a problem statement or feature request straight to Architect without going through PO/BA. Architect decides whether to pull in PO/BA or proceed directly.
+  * **Note**: Architect is also a direct user entry point. The user may bring a problem statement or feature request straight to Architect without going through PO/BA. If requirements are clear and actionable, Architect proceeds directly. If requirements are unclear or incomplete, Architect always delegates to PO/BA first — it never asks the user for clarification itself.
 - Developer
   * **Scope**: module level
   * **Input**: task instructions from Architect
