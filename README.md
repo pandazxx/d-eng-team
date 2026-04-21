@@ -39,7 +39,7 @@ Manage an AI engineering team for the target project, with:
     3. For cross module dependencies and interactions, refer to target module's **Interface design**
     4. Update **Internal design** and **Interface design** of the module it's working on
     5. If modification / support from other module is required, trigger **architect** to coordinate.
-  * A knowledge base with index. Agent can get knowledge on demand. For example, title: Bug in foo() function in base library, link to a document that describe this bug in detail and the solution to avoid it. Agent only keep the title in the context, only during troubleshooting or using this function will the agent load the detail into the context.
+  * A knowledge base that works as a **note dropbox**: any role may drop a note into `team/kb/entries/` at any time — no orchestrator privilege required. Notes record anything worth sharing: bugs, gotchas, decisions, useful patterns. Librarian periodically scans the dropbox, merges duplicate entries, and updates the index. Stale indexing is acceptable. Agents query the KB by loading `team/kb/index.md` (titles and links only, low context cost), then loading a specific entry only when relevant to the current task.
 
 
 # Documents
@@ -59,7 +59,9 @@ Manage an AI engineering team for the target project, with:
 | Interface design    | Engineer         | - API spec, flow charts, exception handling<br>- External usage reference for engineers working with this module |
 | Test cases          | QA               | - Test case<br>- User test cases and instructions                                                             |
 | Manuals             | Architect        | - `Usage.md`<br>- `User Manuals.md`                                                                           |
-| Index               | Librarian        | - index of all documents<br>- provide index for agent to reference                                            |
+| KB entry            | Any role         | A note dropped into `team/kb/entries/`. Records bugs, gotchas, decisions, or useful patterns worth sharing across sessions. |
+| KB index            | Librarian        | Merged, deduplicated index of all KB entries. Agents load this first; entry files on demand.                  |
+| Index               | Librarian        | Index of all project documents (design docs, requirements, test cases). Provides the agent onboarding trail.  |
 
 
 # Roles
@@ -100,7 +102,7 @@ Manage an AI engineering team for the target project, with:
   * **Scope**: project level
   * **Trigger**: lifecycle events — not called directly by other roles or the user
   * **Output**: updated Index, and may spawn other orchestrators to advance the workflow
-  * **Behaviour**: event-driven workflow coordinator. Each lifecycle event tells Librarian what just completed; Librarian indexes the new documents and decides whether to advance the workflow by spawning the next orchestrator.
+  * **Behaviour**: event-driven workflow coordinator and KB curator. Each lifecycle event tells Librarian what just completed; Librarian indexes the new documents and decides whether to advance the workflow by spawning the next orchestrator. On every trigger, Librarian also scans `team/kb/entries/` for new or updated notes, merges duplicates, and updates the KB index.
   * **Events**:
     - `requirements-ready` — BA has produced requirements. Librarian indexes them, then spawns Architect to begin design.
     - `solution-ready` — Architect has produced or revised the Highlevel design. Librarian indexes it and notifies the user to review. No automatic progression — implementation begins only on explicit user instruction.
