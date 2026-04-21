@@ -48,7 +48,7 @@ Manage an AI engineering team for the target project, with:
 
 | Document            | Owner            | Descriptions                                                                                                  |
 |---------------------|------------------|---------------------------------------------------------------------------------------------------------------|
-| Initiative          | Business partner | Target and end-goal of the project. A north star of the project.                                              |
+| Initiative          | Product Owner    | Target and end-goal of the project. A north star of the project.                                              |
 | Use cases           | Business analyst | - Use cases for business scenarios<br>- Includes acceptance criteria<br>- Includes the exceptional scenarios |
 | Detail requirements | Business analyst | Supplementary document of **Use cases**. Provide detail requirement of Use cases                              |
 | ADR                 | Architect        | - Architecture decision record, record every key architecture decisions                                       |
@@ -62,28 +62,42 @@ Manage an AI engineering team for the target project, with:
 
 # Roles
 
-- Business analyst
-  * **Input**: user input
-  * **Output**: user stories, requirements, acceptance criteria.
+- Product Owner
+  * **Scope**: product level
+  * **Input**: user input (vision, goals, problem statements)
+  * **Output**: Initiative document, prioritised backlog, business constraints
+  * **Behaviour**: challenges scope and priority from a business value perspective — asks "what's the ROI?", "who are the users?", "what's the priority?". Delegates requirements structuring to BA.
+- Business Analyst
+  * **Scope**: requirements level
+  * **Input**: Initiative and direction from Product Owner, or direct user input
+  * **Output**: use cases, acceptance criteria, detail requirements
 - Architect
   * **Scope**: project level
-  * **Input**: requirements, user stories
-  * **Output**: Highlevel design, instructions to **Developer** and **QA**
+  * **Input**: requirements and user stories from BA — **or direct user input**
+  * **Output**: Highlevel design, ADRs, instructions to **Developer** and **QA**
+  * **Note**: Architect is also a direct user entry point. The user may bring a problem statement or feature request straight to Architect without going through PO/BA. Architect decides whether to pull in PO/BA or proceed directly.
 - Developer
   * **Scope**: module level
+  * **Input**: task instructions from Architect
+  * **Output**: implementation, updated Module design and Detail design
 - QA
+  * **Scope**: module level
+  * **Input**: implementation from Developer, acceptance criteria from BA
+  * **Output**: test cases, test results, bug reports
 - Librarian
-  * Organize the document base
+  * **Scope**: project level
+  * **Input**: triggered by any role or user after significant document changes
+  * **Output**: updated Index
 
 
-| role             | is orchestrator | counterparts                    | Document scope                                           |
-| ---------------- | --------------- | ------------------------------- | -------------------------------------------------------- |
-| Business partner | No              | Business analyst                | Initiative                                               |
-| Business analyst | No              | Architect                       | Highlevel requirement<br>Detail requirement<br>Use cases |
-| Architect        | Yes             | Everyone                        | Highlevel design                                         |
-| Engineer         | No              | Architect, QA, Business analyst | Module design<br>Detail design                           |
-| QA               | No              | Engineer, Business analyst      | Module design<br>Detail design<br>Test cases             |
-| Librarian        | Yes             | Everyone                        | All                                                      |
+| role          | is orchestrator | counterparts             | Document scope                                           |
+| ------------- | --------------- | ------------------------ | -------------------------------------------------------- |
+| Product Owner | Yes             | BA, Architect            | Initiative                                               |
+| BA            | No              | Product Owner, Architect | Use cases<br>Detail requirements                         |
+| Architect     | Yes             | Everyone                 | Highlevel design<br>ADR<br>Manuals                       |
+| Developer     | No              | Architect, QA            | Module design<br>Detail design                           |
+| QA            | No              | Developer, BA            | Test cases                                               |
+| Librarian     | Yes             | Everyone                 | Index                                                    |
 
 
 # Session architecture
@@ -124,7 +138,12 @@ Effective call graph:
 
 ```
 User
- └── Architect (orchestrator)
+ └── Product Owner (orchestrator) ← full requirements flow
+      ├── BA         (non-orchestrator)
+      └── Architect  (called as non-orchestrator)
+
+User
+ └── Architect (orchestrator) ← direct entry point
       ├── Developer  (non-orchestrator)
       ├── QA         (non-orchestrator)
       ├── BA         (non-orchestrator)
