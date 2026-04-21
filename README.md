@@ -86,36 +86,81 @@ Manage an AI engineering team for the target project, with:
 | Librarian        | Yes             | Everyone                        | All                                                      |
 
 
+# Session architecture
+
+Each role runs as a separate `claude` CLI process, giving true context and memory isolation. Roles communicate through files. The current implementation is synchronous — the caller blocks until the spawned process completes. Async is a future upgrade path.
+
+## Spawning a role
+
+Orchestrators use the Bash tool to launch a new `claude` process, injecting the target role's skill as the system prompt:
+
+```bash
+claude -p "From: Architect
+To: Developer
+---
+<request body>" \
+  --system-prompt "$(cat .claude/skills/developer.md)" \
+  > team/outbox/developer-$(date +%s).md
+```
+
+The response file is the callee's full reply, written in the response format below. The caller reads it and continues.
+
+## Nesting rule
+
+**Only orchestrators may spawn new processes.** When one orchestrator calls another, the callee runs in non-orchestrator mode and cannot spawn further. This caps nesting at depth 2.
+
+The caller enforces this by appending one line to the system prompt:
+
+```bash
+ROLE_SKILL=$(cat .claude/skills/librarian.md)
+
+claude -p "..." \
+  --system-prompt "${ROLE_SKILL}
+
+You are running as a delegated agent. Do not spawn new claude processes."
+```
+
+Effective call graph:
+
+```
+User
+ └── Architect (orchestrator)
+      ├── Developer  (non-orchestrator)
+      ├── QA         (non-orchestrator)
+      ├── BA         (non-orchestrator)
+      └── Librarian  (called as non-orchestrator)
+
+User
+ └── Librarian (orchestrator, user-initiated)
+      ├── Architect  (called as non-orchestrator)
+      └── Developer  (called as non-orchestrator)
+```
+
 # Orchestration
 
-**Orchestrator**s can command other roles which might be running in other session/agents. There should be a contract between the commander and executor.
+Orchestrators command other roles via file-based message passing. Request and response files are written to `team/outbox/`.
 
 ## Request format
-A prompt
+
 ```
-From: <from agent name>
-To: <target agent name>
+From: <from role>
+To: <target role>
 ---
-<request prompt body>
+<request body>
 ```
 
 ## Response format
+
 ```
-From: <from agent name>
-To: <to agent name>
-Status: <status of the prompt>
+From: <from role>
+To: <to role>
+Status: <Done | Stuck>
 ---
-<respond body>
+<response body>
 ```
 
-- **Status**:
-  * **Done**: job done. The response body is the result of the work done.
-  * **Stuck**: job stuck by insufficient information or issues cannot be fixed within the scope of current agent. The requestor should clarify / coordinate and fix the issue / escalate to user. Once issue fixed, the requestor should request the target to continue. In this status, the response should be the reason of the blockage.
-
-
-The plugin should provide skills for both requestor and the target.
-- For requestor: request format, execute prompt on different agent session
-- For target: response format
+- **Done**: task complete. Response body is the result.
+- **Stuck**: task blocked by insufficient information or an issue outside the callee's scope. Response body describes the blockage. The caller must resolve it (clarify, coordinate, or escalate to the user) and re-invoke.
 
 # How this plugin works
 
