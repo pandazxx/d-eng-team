@@ -74,12 +74,13 @@ Manage an AI engineering team for the target project, with:
 - Architect
   * **Scope**: project level
   * **Input**: requirements and user stories from BA — **or direct user input**
-  * **Output**: Highlevel design, ADRs, instructions to **Developer** and **QA**
+  * **Output**: Highlevel design, ADRs, task assignments to Developer and QA
   * **Note**: Architect is also a direct user entry point. The user may bring a problem statement or feature request straight to Architect without going through PO/BA. If requirements are clear and actionable, Architect proceeds directly. If requirements are unclear or incomplete, Architect always delegates to PO/BA first — it never asks the user for clarification itself.
+  * **Task assignment**: After producing the Highlevel design, Architect breaks it down into module-level tasks and spawns a Developer per task. Each task assignment includes: module name, task description, relevant design doc references, and any cross-module constraints.
 - Developer
-  * **Scope**: module level
-  * **Input**: task instructions from Architect
-  * **Output**: implementation, updated Module design and Detail design
+  * **Scope**: module level — one Developer per assigned task
+  * **Input**: task assignment from Architect (module, task, design doc references, constraints)
+  * **Output**: implementation, updated Module design and Detail design, report back to Architect
 - QA
   * **Scope**: module level
   * **Input**: implementation from Developer, acceptance criteria from BA
@@ -158,6 +159,26 @@ User
 # Orchestration
 
 Orchestrators command other roles via file-based message passing. Request and response files are written to `team/outbox/`.
+
+## Task assignment (Architect → Developer)
+
+A task assignment is a request with a structured body:
+
+```
+From: Architect
+To: Developer
+---
+Module: <module name>
+Task: <what to implement>
+Design refs:
+  - docs/highlevel/<file>.md
+  - docs/modules/<module>.md
+Constraints: <cross-module dependencies or interface contracts to respect>
+
+<additional context>
+```
+
+Architect spawns one Developer process per task. In the current sync implementation, tasks are assigned sequentially. Parallel assignment is a future upgrade.
 
 ## Request format
 
