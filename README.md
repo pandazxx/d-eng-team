@@ -19,7 +19,7 @@ Manage an AI engineering team for the target project, with:
 
 # Ideology
 
-- Skill **coach**: gets the repo ready for this workflow, ensures that the `AGENTS.md`/`CLAUDE.md` contains necessary instruction for this workflow
+- Skill **crew**: gets the repo ready for this workflow, ensures that the `AGENTS.md`/`CLAUDE.md` contains necessary instruction for this workflow
 - Document structure:
   * Three levels of design documents:
     - **Highlevel design**:
@@ -314,7 +314,7 @@ Librarian processes the event and indexes new documents.
 
 This plugin is implemented as **Claude Code skills + `CLAUDE.md` pointer + instruction files**. No npm, no CLI, no separate installer. Claude Code is the runtime.
 
-Skills are markdown files (`.claude/skills/<name>.md`) invoked as `/skill-name` inside Claude Code. The plugin ships role skills (`/ba`, `/architect`, `/developer`, `/qa`, `/librarian`) and one lifecycle skill (`/coach`).
+Skills are markdown files (`.claude/skills/<name>.md`) invoked as `/skill-name` inside Claude Code. The plugin ships role skills (`/ba`, `/architect`, `/developer`, `/qa`, `/librarian`) and one lifecycle skill (`/crew`).
 
 ## CLAUDE.md injection
 
@@ -356,27 +356,27 @@ The sanity pass **reports only** — it never auto-fixes. Conflicts are surfaced
 The entire plugin is distributed as a **single self-contained skill file**. To install:
 
 ```bash
-curl -o .claude/skills/coach.md https://raw.githubusercontent.com/<org>/d-eng-team/main/coach.md
+curl -o .claude/skills/crew.md https://raw.githubusercontent.com/<org>/d-eng-team/main/crew.md
 ```
 
 Then inside Claude Code:
 
 ```
-/coach
+/crew
 ```
 
-That's it. The `/coach` skill bootstraps everything else — no second network call required. All role skill templates and document templates are embedded in the single file. Claude materialises them locally on first run.
+That's it. The `/crew` skill bootstraps everything else — no second network call required. All role skill templates and document templates are embedded in the single file. Claude materialises them locally on first run.
 
-## The `/coach` skill
+## The `/crew` skill
 
-`/coach` is the single entry point for the full plugin lifecycle:
+`/crew` is the single entry point for the full plugin lifecycle:
 
 | Mode | Command | Behaviour |
 |---|---|---|
-| Auto-detect | `/coach` | Install if fresh project, upgrade if already installed |
-| Install | `/coach install` | Force full install |
-| Upgrade | `/coach upgrade` | Overwrite plugin-owned files, preserve user content |
-| Doctor | `/coach doctor` | Report only — no writes |
+| Auto-detect | `/crew` | Install if fresh project, upgrade if already installed |
+| Install | `/crew install` | Force full install |
+| Upgrade | `/crew upgrade` | Overwrite plugin-owned files, preserve user content |
+| Doctor | `/crew doctor` | Report only — no writes |
 
 ### Doctor as the foundation
 
@@ -412,15 +412,15 @@ Doctor defines the canonical "correctly installed" state. Install and upgrade bo
 ## Plugin structure
 
 ```
-coach.md          ← single curl target; contains all embedded templates
+crew.md          ← single curl target; contains all embedded templates
 ```
 
-After `/coach install`, the project gains:
+After `/crew install`, the project gains:
 
 ```
 .claude/
   skills/
-    coach.md      ← lifecycle skill (install / upgrade / doctor)
+    crew.md      ← lifecycle skill (install / upgrade / doctor)
     ba.md              ← Business Analyst role skill
     architect.md       ← Architect role skill
     developer.md       ← Developer role skill
