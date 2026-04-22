@@ -312,9 +312,44 @@ Librarian processes the event and indexes new documents.
 
 ## Plugin mechanism
 
-This plugin is implemented as **Claude Code skills + `CLAUDE.md` injection**. No npm, no CLI, no separate installer. Claude Code is the runtime.
+This plugin is implemented as **Claude Code skills + `CLAUDE.md` pointer + instruction files**. No npm, no CLI, no separate installer. Claude Code is the runtime.
 
 Skills are markdown files (`.claude/skills/<name>.md`) invoked as `/skill-name` inside Claude Code. The plugin ships role skills (`/ba`, `/architect`, `/developer`, `/qa`, `/librarian`) and one lifecycle skill (`/onboarding`).
+
+## CLAUDE.md injection
+
+The plugin keeps the project's `CLAUDE.md` clean. Only a minimal pointer block is injected:
+
+```markdown
+<!-- d-eng-team v1.0 -->
+This project uses the d-eng-team workflow plugin.
+Instructions: `.claude/d-eng-team/`
+<!-- /d-eng-team -->
+```
+
+All actual workflow instructions live in plugin-owned files under `.claude/d-eng-team/`:
+
+| File | Contents |
+|---|---|
+| `workflow.md` | Roles, phases, event firing, lifecycle |
+| `documents.md` | Document structure, folder paths, ownership |
+| `kb.md` | How to write and query KB entries |
+| `communication.md` | Request/response format, task assignment format |
+
+These files are fully plugin-owned — always overwritten on upgrade, never merged. Agents load them on demand when the workflow is relevant; the pointer block in `CLAUDE.md` tells every agent they exist.
+
+### Sanity pass
+
+Install and doctor both run a sanity pass on the existing `CLAUDE.md` to flag instructions that may conflict with the plugin. Common conflicts:
+
+| Existing instruction | Conflict |
+|---|---|
+| "Don't write documentation" | Plugin is doc-heavy by design |
+| Custom folder structure rules | Conflicts with `docs/highlevel/`, `docs/internal/`, etc. |
+| Language or format constraints | Spawned agents inherit these and may break the response format |
+| Existing agent role definitions | May conflict with plugin role skill files |
+
+The sanity pass **reports only** — it never auto-fixes. Conflicts are surfaced for the user to resolve.
 
 ## Installation
 
@@ -356,18 +391,21 @@ Doctor defines the canonical "correctly installed" state. Install and upgrade bo
 | Check | Expected state | Owned by |
 |---|---|---|
 | Role skill files | `.claude/skills/{ba,architect,developer,qa,librarian}.md` exist | Plugin |
+| Instruction files | `.claude/d-eng-team/{workflow,documents,kb,communication}.md` exist | Plugin |
 | Doc folders | `docs/highlevel/`, `docs/internal/`, `docs/interface/`, `docs/templates/`, `team/kb/entries/` exist | Plugin |
-| `CLAUDE.md` block | `<!-- d-eng-team -->` block present and at current version | Plugin |
+| `CLAUDE.md` block | `<!-- d-eng-team -->` pointer block present and at current version | Plugin |
 | KB index | `team/kb/index.md` exists | Plugin (scaffold only) |
 | Document templates | One template per document type in `docs/templates/` | Plugin |
+| Sanity pass | No critical conflicts in existing `CLAUDE.md` | User (reported only) |
 
 ### Idempotency rules
 
 | File category | Install | Upgrade |
 |---|---|---|
 | Role skill files (`.claude/skills/`) | Write | Always overwrite |
+| Instruction files (`.claude/d-eng-team/`) | Write | Always overwrite |
 | Document templates (`docs/templates/`) | Write | Overwrite if unchanged, prompt if modified |
-| `CLAUDE.md` block | Append | Diff and update block in-place |
+| `CLAUDE.md` pointer block | Append | Update version number only |
 | KB index (`team/kb/index.md`) | Scaffold empty | Never touch |
 | User design docs (`docs/`, `team/`) | Never touch | Never touch |
 
@@ -388,6 +426,11 @@ After `/onboarding install`, the project gains:
     developer.md       ← Developer role skill
     qa.md              ← QA role skill
     librarian.md       ← Librarian role skill
+  d-eng-team/
+    workflow.md        ← roles, phases, event firing, lifecycle
+    documents.md       ← document structure, folder paths, ownership
+    kb.md              ← how to write and query KB entries
+    communication.md   ← request/response format, task assignment
 docs/
   templates/           ← one template per document type
   highlevel/
