@@ -108,7 +108,7 @@ Manage an AI engineering team for the target project, with:
     - `solution-ready` — Architect has produced or revised the Highlevel design. Librarian indexes it and notifies the user to review. No automatic progression — implementation begins only on explicit user instruction.
     - `development-done` — Developer has completed a module. Librarian indexes updated design docs, then spawns QA for that module.
     - `test-cases-ready` — QA has completed test cases. Librarian indexes them and reports status.
-  * **Triggering Librarian**: any role may fire an event on completion — event firing is distinct from process spawning and requires no orchestrator privilege. Librarian reacts to the event independently.
+  * **Triggering Librarian**: any role fires an event by including `Event: <name>` in its response. The receiving orchestrator reads the field and spawns Librarian with the event as the prompt. Event firing requires no orchestrator privilege — only the final spawning of Librarian does.
 
 
 | role          | is orchestrator | counterparts             | Document scope                                           |
@@ -260,12 +260,35 @@ To: <target role>
 From: <from role>
 To: <to role>
 Status: <Done | Stuck>
+Event: <event-name>          (optional)
 ---
 <response body>
 ```
 
-- **Done**: task complete. Response body is the result.
-- **Stuck**: task blocked by insufficient information or an issue outside the callee's scope. Response body describes the blockage. The caller must resolve it (clarify, coordinate, or escalate to the user) and re-invoke.
+- **Status**:
+  - **Done**: task complete. Response body is the result.
+  - **Stuck**: task blocked by insufficient information or an issue outside the callee's scope. Response body describes the blockage. The caller must resolve it (clarify, coordinate, or escalate to the user) and re-invoke.
+- **Event** (optional): the lifecycle event this role fires on completion. Any role may include this field. The orchestrator that receives the response is responsible for reading it and spawning Librarian with the event name as the trigger.
+
+## Event firing
+
+Roles signal lifecycle completion via the `Event:` field in their response — no orchestrator privilege required. The receiving orchestrator spawns Librarian after reading the response:
+
+```bash
+# orchestrator reads response, sees Event: requirements-ready
+claude -p "Event: requirements-ready
+Summary: <what was produced>" \
+  --system-prompt "$(cat .claude/skills/librarian.md)"
+```
+
+Librarian processes the event, indexes new documents, and decides whether to advance the workflow.
+
+| Role | Event fired |
+|---|---|
+| BA | `requirements-ready` |
+| Architect (design phase) | `solution-ready` |
+| Developer | `development-done` |
+| QA | `test-cases-ready` |
 
 # How this plugin works
 
