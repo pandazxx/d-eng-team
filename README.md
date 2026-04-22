@@ -314,7 +314,7 @@ Librarian processes the event and indexes new documents.
 
 This plugin is implemented as **Claude Code skills + `CLAUDE.md` pointer + instruction files**. No npm, no CLI, no separate installer. Claude Code is the runtime.
 
-Skills are markdown files (`.claude/skills/<name>.md`) invoked as `/skill-name` inside Claude Code. The plugin ships role skills (`/ba`, `/architect`, `/developer`, `/qa`, `/librarian`) and one lifecycle skill (`/crew`).
+Skills are markdown files (`.claude/skills/<name>.md`) invoked as `/skill-name` inside Claude Code. The plugin ships role skills (`/po`, `/ba`, `/architect`, `/developer`, `/qa`, `/librarian`) and one lifecycle skill (`/crew`).
 
 ## CLAUDE.md injection
 
@@ -390,7 +390,7 @@ Doctor defines the canonical "correctly installed" state. Install and upgrade bo
 
 | Check | Expected state | Owned by |
 |---|---|---|
-| Role skill files | `.claude/skills/{ba,architect,developer,qa,librarian}.md` exist | Plugin |
+| Role skill files | `.claude/skills/{po,ba,architect,developer,qa,librarian}.md` exist | Plugin |
 | Instruction files | `.claude/d-eng-team/{workflow,documents,kb,communication}.md` exist | Plugin |
 | Doc folders | `docs/highlevel/`, `docs/internal/`, `docs/interface/`, `docs/templates/`, `team/kb/entries/` exist | Plugin |
 | `CLAUDE.md` block | `<!-- d-eng-team -->` pointer block present and at current version | Plugin |
@@ -420,7 +420,8 @@ After `/crew install`, the project gains:
 ```
 .claude/
   skills/
-    crew.md      ← lifecycle skill (install / upgrade / doctor)
+    crew.md            ← lifecycle skill (install / upgrade / doctor)
+    po.md              ← Product Owner role skill
     ba.md              ← Business Analyst role skill
     architect.md       ← Architect role skill
     developer.md       ← Developer role skill
