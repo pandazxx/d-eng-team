@@ -73,11 +73,10 @@ Manage an AI engineering team for the target project, with:
     - Output: Initiative document, prioritised backlog, business constraints
     - Behaviour: challenges scope and priority from a business value perspective — asks "what's the ROI?", "who are the users?", "what's the priority?". Spawns BA to structure requirements.
   * **Phase 2 — UAT**:
-    - Triggered by Librarian after `test-cases-ready`
-    - Input: reads Implementation against Initiative document and Use cases
+    - Triggered by Architect after all modules complete dev + QA
+    - Input: reads full implementation against Initiative document and Use cases
     - Output: UAT result — pass or fail with specific gaps
-    - Pass: notifies user that the cycle is complete and ready for release pipeline
-    - Fail: spawns BA to update requirements, loop restarts from design
+    - Fires `uat-passed` or `uat-failed` event on completion
 - Business Analyst
   * **Scope**: requirements level
   * **Input**: Initiative and direction from Product Owner, or direct user input
@@ -93,9 +92,16 @@ Manage an AI engineering team for the target project, with:
     - The user reviews the design and may request changes. Architect revises and fires `solution-ready` again. This loop continues until the user is satisfied.
   * **Phase 2 — Implementation** (explicit user trigger only):
     - Begins only when the user explicitly instructs Architect to proceed
-    - Architect reads the approved Highlevel design, breaks it into module-level tasks, and spawns one Developer per task
-    - Each task assignment includes: module name, task description, design doc references, and cross-module constraints
-    - On all tasks complete: Architect notifies the user; Librarian handles the per-module QA and UAT flow via lifecycle events
+    - Architect reads the approved Highlevel design, breaks it into module-level tasks, then for each module:
+      1. Spawns Developer with task assignment (module, task, design refs, constraints)
+      2. Developer fires `development-done` → Librarian indexes
+      3. Architect spawns QA for that module
+      4. QA fires `test-cases-ready` → Librarian indexes
+    - After **all** modules complete dev + QA: Architect spawns PO for UAT
+    - PO validates the full implementation against Initiative and Use cases
+    - PO fires `uat-passed` or `uat-failed` → Librarian indexes and notifies user
+    - On `uat-passed`: user triggers the release pipeline (tag / PR merge → CI/CD)
+    - On `uat-failed`: Architect spawns BA to update requirements; design loop restarts
 - Developer
   * **Scope**: module level — one Developer per assigned task
   * **Input**: task assignment from Architect (module, task, design doc references, constraints)
@@ -109,15 +115,15 @@ Manage an AI engineering team for the target project, with:
 - Librarian
   * **Scope**: project level
   * **Trigger**: lifecycle events — not called directly by other roles or the user
-  * **Output**: updated Index, and may spawn other orchestrators to advance the workflow
-  * **Behaviour**: event-driven workflow coordinator and KB curator. Each lifecycle event tells Librarian what just completed; Librarian indexes the new documents and decides whether to advance the workflow by spawning the next orchestrator. On every trigger, Librarian also scans `team/kb/entries/` for new or updated notes, merges duplicates, and updates the KB index.
-  * **Events**:
-    - `requirements-ready` — BA has produced requirements. Librarian indexes them, then spawns Architect to begin design.
-    - `solution-ready` — Architect has produced or revised the Highlevel design. Librarian indexes it and notifies the user to review. No automatic progression — implementation begins only on explicit user instruction.
-    - `development-done` — Developer has completed a module. Librarian indexes updated design docs, then spawns QA for that module.
-    - `test-cases-ready` — QA has completed test cases for a module. Librarian indexes them, then spawns PO to perform UAT for that module.
-    - `uat-passed` — PO has validated the module against business requirements. Librarian indexes the result and notifies the user. CI/CD and release are pipeline actions triggered by the user via tagging or PR merging — not managed by any role.
-    - `uat-failed` — PO found gaps against business requirements. Librarian spawns BA to update requirements; the design-implement-test loop restarts.
+  * **Output**: updated KB index, updated document Index
+  * **Behaviour**: document curator and KB maintainer. Indexes new and updated documents on each lifecycle event, scans `team/kb/entries/` for new notes, merges duplicates, and updates the KB index. Does **not** advance workflow — Librarian spawns other roles only to correct documentation issues (e.g. an inconsistent design doc, an ambiguous requirement), never to progress to the next workflow stage.
+  * **Events** (Librarian indexes on each; no workflow spawning):
+    - `requirements-ready` — indexes new requirements documents
+    - `solution-ready` — indexes new Highlevel design and ADRs
+    - `development-done` — indexes updated Internal design and Interface design for the completed module
+    - `test-cases-ready` — indexes new test cases and results
+    - `uat-passed` — indexes UAT result; notifies user that the cycle is complete
+    - `uat-failed` — indexes UAT result; notifies user of gaps found
   * **Triggering Librarian**: any role fires an event by including `Event: <name>` in its response. The receiving orchestrator reads the field and spawns Librarian with the event as the prompt. Event firing requires no orchestrator privilege — only the final spawning of Librarian does.
 
 
@@ -155,19 +161,20 @@ User
                                    └───────────────────────────────────┘
                                         │
                          [Implementation phase — explicit user trigger]
-                              Architect assigns module tasks to Developers (one per module)
-                              └─ each Developer completes task
-                                   └─ fires: development-done
-                                        └─ Librarian indexes  →  spawns QA for that module
-                                             └─ QA produces test cases + results
-                                                  └─ fires: test-cases-ready
-                                                       └─ Librarian indexes  →  spawns PO for UAT
-                                                            └─ PO validates against Initiative + Use cases
-                                                                 ├─ uat-passed  →  Librarian notifies user
-                                                                 │                 └─ User triggers pipeline
-                                                                 │                    (tag / PR merge → CI/CD → release)
-                                                                 └─ uat-failed  →  Librarian spawns BA
-                                                                                   └─ requirements updated, loop restarts
+                              Architect manages full cycle per module:
+                              ├─ spawns Developer  →  fires: development-done  →  Librarian indexes
+                              └─ spawns QA         →  fires: test-cases-ready  →  Librarian indexes
+                              (repeated for each module)
+                                        │
+                              After ALL modules complete dev + QA:
+                              Architect spawns PO for UAT
+                                   └─ PO validates full implementation against Initiative + Use cases
+                                        ├─ uat-passed  →  fires event  →  Librarian indexes + notifies user
+                                        │                                  └─ User triggers pipeline
+                                        │                                     (tag / PR merge → CI/CD → release)
+                                        └─ uat-failed  →  fires event  →  Librarian indexes + notifies user
+                                                                            └─ Architect spawns BA
+                                                                                 └─ requirements updated, loop restarts
 ```
 
 
