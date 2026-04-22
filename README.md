@@ -68,9 +68,16 @@ Manage an AI engineering team for the target project, with:
 
 - Product Owner
   * **Scope**: product level
-  * **Input**: user input (vision, goals, problem statements)
-  * **Output**: Initiative document, prioritised backlog, business constraints
-  * **Behaviour**: challenges scope and priority from a business value perspective — asks "what's the ROI?", "who are the users?", "what's the priority?". Delegates requirements structuring to BA.
+  * **Phase 1 — Requirements**:
+    - Input: user input (vision, goals, problem statements)
+    - Output: Initiative document, prioritised backlog, business constraints
+    - Behaviour: challenges scope and priority from a business value perspective — asks "what's the ROI?", "who are the users?", "what's the priority?". Spawns BA to structure requirements.
+  * **Phase 2 — UAT**:
+    - Triggered by Librarian after `test-cases-ready`
+    - Input: reads Implementation against Initiative document and Use cases
+    - Output: UAT result — pass or fail with specific gaps
+    - Pass: notifies user that the cycle is complete and ready for release pipeline
+    - Fail: spawns BA to update requirements, loop restarts from design
 - Business Analyst
   * **Scope**: requirements level
   * **Input**: Initiative and direction from Product Owner, or direct user input
@@ -88,6 +95,7 @@ Manage an AI engineering team for the target project, with:
     - Begins only when the user explicitly instructs Architect to proceed
     - Architect reads the approved Highlevel design, breaks it into module-level tasks, and spawns one Developer per task
     - Each task assignment includes: module name, task description, design doc references, and cross-module constraints
+    - On all tasks complete: Architect notifies the user; Librarian handles the per-module QA and UAT flow via lifecycle events
 - Developer
   * **Scope**: module level — one Developer per assigned task
   * **Input**: task assignment from Architect (module, task, design doc references, constraints)
@@ -107,18 +115,20 @@ Manage an AI engineering team for the target project, with:
     - `requirements-ready` — BA has produced requirements. Librarian indexes them, then spawns Architect to begin design.
     - `solution-ready` — Architect has produced or revised the Highlevel design. Librarian indexes it and notifies the user to review. No automatic progression — implementation begins only on explicit user instruction.
     - `development-done` — Developer has completed a module. Librarian indexes updated design docs, then spawns QA for that module.
-    - `test-cases-ready` — QA has completed test cases. Librarian indexes them and reports status.
+    - `test-cases-ready` — QA has completed test cases for a module. Librarian indexes them, then spawns PO to perform UAT for that module.
+    - `uat-passed` — PO has validated the module against business requirements. Librarian indexes the result and notifies the user. CI/CD and release are pipeline actions triggered by the user via tagging or PR merging — not managed by any role.
+    - `uat-failed` — PO found gaps against business requirements. Librarian spawns BA to update requirements; the design-implement-test loop restarts.
   * **Triggering Librarian**: any role fires an event by including `Event: <name>` in its response. The receiving orchestrator reads the field and spawns Librarian with the event as the prompt. Event firing requires no orchestrator privilege — only the final spawning of Librarian does.
 
 
-| role          | is orchestrator | counterparts             | Document scope                                           |
-| ------------- | --------------- | ------------------------ | -------------------------------------------------------- |
-| Product Owner | Yes             | BA, Architect            | Initiative                                               |
-| BA            | No              | Product Owner, Architect | Use cases<br>Detail requirements                         |
-| Architect     | Yes             | Everyone                 | Highlevel design<br>ADR<br>Manuals                       |
-| Developer     | No              | Architect, QA            | Internal design<br>Interface design                           |
-| QA            | No              | Developer, BA            | Test cases                                               |
-| Librarian     | Yes             | Everyone                 | Index                                                    |
+| role          | is orchestrator | counterparts  | Document scope                                                  |
+| ------------- | --------------- | ------------- | --------------------------------------------------------------- |
+| Product Owner | Yes             | BA, Librarian | Initiative<br>Prioritised backlog<br>Business constraints       |
+| BA            | No              | PO            | Use cases<br>Detail requirements                                |
+| Architect     | Yes             | Librarian, BA | Highlevel design<br>ADR<br>Manuals                              |
+| Developer     | No              | Architect     | Internal design<br>Interface design                             |
+| QA            | No              | Librarian     | Test cases                                                      |
+| Librarian     | Yes             | Everyone      | KB index<br>Index                                               |
 
 
 # End-to-end workflow
@@ -137,21 +147,27 @@ User
                               └─ fires: solution-ready
                                    └─ Librarian indexes  →  notifies user to review
                                         │
-                                   ┌────┴────────────────────────┐
-                                   │  User reviews design         │
+                                   ┌────┴──────────────────────────────┐
+                                   │  User reviews design               │
                                    │  ├─ changes requested  ──►  Architect revises
                                    │  │                           └─ fires: solution-ready (loop)
                                    │  └─ satisfied  ─────────►  User: "proceed with implementation"
-                                   └─────────────────────────────┘
+                                   └───────────────────────────────────┘
                                         │
                          [Implementation phase — explicit user trigger]
                               Architect assigns module tasks to Developers (one per module)
                               └─ each Developer completes task
                                    └─ fires: development-done
                                         └─ Librarian indexes  →  spawns QA for that module
-                                             └─ QA produces test cases
+                                             └─ QA produces test cases + results
                                                   └─ fires: test-cases-ready
-                                                       └─ Librarian indexes  →  notifies user
+                                                       └─ Librarian indexes  →  spawns PO for UAT
+                                                            └─ PO validates against Initiative + Use cases
+                                                                 ├─ uat-passed  →  Librarian notifies user
+                                                                 │                 └─ User triggers pipeline
+                                                                 │                    (tag / PR merge → CI/CD → release)
+                                                                 └─ uat-failed  →  Librarian spawns BA
+                                                                                   └─ requirements updated, loop restarts
 ```
 
 
@@ -289,6 +305,7 @@ Librarian processes the event, indexes new documents, and decides whether to adv
 | Architect (design phase) | `solution-ready` |
 | Developer | `development-done` |
 | QA | `test-cases-ready` |
+| PO (UAT) | `uat-passed` or `uat-failed` |
 
 # How this plugin works
 
