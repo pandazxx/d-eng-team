@@ -76,7 +76,8 @@ Manage an AI engineering team for the target project, with:
     - Triggered by Architect after all modules complete dev + QA
     - Input: reads full implementation against Initiative document and Use cases
     - Output: UAT result — pass or fail with specific gaps
-    - Fires `uat-passed` or `uat-failed` event on completion
+    - On `uat-passed`: fires event, returns to Architect
+    - On `uat-failed`: spawns BA to update requirements, then fires event; design loop restarts
 - Business Analyst
   * **Scope**: requirements level
   * **Input**: Initiative and direction from Product Owner, or direct user input
@@ -101,7 +102,7 @@ Manage an AI engineering team for the target project, with:
     - PO validates the full implementation against Initiative and Use cases
     - PO fires `uat-passed` or `uat-failed` → Librarian indexes and notifies user
     - On `uat-passed`: user triggers the release pipeline (tag / PR merge → CI/CD)
-    - On `uat-failed`: Architect spawns BA to update requirements; design loop restarts
+    - On `uat-failed`: PO handles requirements update (spawns BA); Architect awaits updated requirements to restart design
 - Developer
   * **Scope**: module level — one Developer per assigned task
   * **Input**: task assignment from Architect (module, task, design doc references, constraints)
@@ -130,8 +131,8 @@ Manage an AI engineering team for the target project, with:
 | role          | is orchestrator | counterparts  | Document scope                                                  |
 | ------------- | --------------- | ------------- | --------------------------------------------------------------- |
 | Product Owner | Yes             | BA            | Initiative<br>Prioritised backlog<br>Business constraints       |
-| BA            | No              | PO, Architect | Use cases<br>Detail requirements                                |
-| Architect     | Yes             | Developer, QA, PO, BA, Librarian | Highlevel design<br>ADR<br>Manuals             |
+| BA            | No              | PO            | Use cases<br>Detail requirements                                |
+| Architect     | Yes             | Developer, QA, PO, Librarian | Highlevel design<br>ADR<br>Manuals                  |
 | Developer     | No              | Architect     | Internal design<br>Interface design                             |
 | QA            | No              | Architect     | Test cases                                                      |
 | Librarian     | Yes             | (event-driven, doc corrections only) | KB index<br>Index                        |
@@ -175,8 +176,9 @@ User
                                         │                                  └─ User triggers pipeline
                                         │                                     (tag / PR merge → CI/CD → release)
                                         └─ uat-failed  →  fires event  →  Librarian indexes + notifies user
-                                                                            └─ Architect spawns BA
-                                                                                 └─ requirements updated, loop restarts
+                                                                            └─ PO spawns BA
+                                                                                 └─ requirements updated
+                                                                                      └─ Architect restarts design loop
 ```
 
 
