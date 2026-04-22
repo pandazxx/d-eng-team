@@ -55,8 +55,8 @@ Manage an AI engineering team for the target project, with:
 | Detail requirements | Business analyst | Supplementary document of **Use cases**. Provide detail requirement of Use cases                              |
 | ADR                 | Architect        | - Architecture decision record, record every key architecture decisions                                       |
 | Highlevel design    | Architect        | - Highlevel design of the project<br>- Focus on highlevel flow and the boundary of modules                     |
-| Internal design     | Engineer         | - Detail logic of the module<br>- Internal usage reference for engineers working on this module               |
-| Interface design    | Engineer         | - API spec, flow charts, exception handling<br>- External usage reference for engineers working with this module |
+| Internal design     | Developer        | - Detail logic of the module<br>- Internal usage reference for engineers working on this module               |
+| Interface design    | Developer        | - API spec, flow charts, exception handling<br>- External usage reference for engineers working with this module |
 | Test cases          | QA               | - Test case<br>- User test cases and instructions                                                             |
 | Manuals             | Architect        | - `Usage.md`<br>- `User Manuals.md`                                                                           |
 | KB entry            | Any role         | A note dropped into `team/kb/entries/`. Records bugs, gotchas, decisions, or useful patterns worth sharing across sessions. |
@@ -129,12 +129,12 @@ Manage an AI engineering team for the target project, with:
 
 | role          | is orchestrator | counterparts  | Document scope                                                  |
 | ------------- | --------------- | ------------- | --------------------------------------------------------------- |
-| Product Owner | Yes             | BA, Librarian | Initiative<br>Prioritised backlog<br>Business constraints       |
-| BA            | No              | PO            | Use cases<br>Detail requirements                                |
-| Architect     | Yes             | Librarian, BA | Highlevel design<br>ADR<br>Manuals                              |
+| Product Owner | Yes             | BA            | Initiative<br>Prioritised backlog<br>Business constraints       |
+| BA            | No              | PO, Architect | Use cases<br>Detail requirements                                |
+| Architect     | Yes             | Developer, QA, PO, BA, Librarian | Highlevel design<br>ADR<br>Manuals             |
 | Developer     | No              | Architect     | Internal design<br>Interface design                             |
-| QA            | No              | Librarian     | Test cases                                                      |
-| Librarian     | Yes             | Everyone      | KB index<br>Index                                               |
+| QA            | No              | Architect     | Test cases                                                      |
+| Librarian     | Yes             | (event-driven, doc corrections only) | KB index<br>Index                        |
 
 
 # End-to-end workflow
@@ -144,7 +144,9 @@ User
  │
  ├─(requirements unclear)─► /po  →  PO spawns BA  →  BA produces requirements
  │                                  └─ fires: requirements-ready
- │                                       └─ Librarian indexes  →  spawns Architect (design phase)
+ │                                       └─ Librarian indexes  →  notifies user
+ │                                            └─ User: "requirements ready, proceed to design"
+ │                                                 └─► /architect
  │
  └─(requirements clear)──► /architect
                               │
@@ -199,18 +201,12 @@ The response file is the callee's full reply, written in the response format bel
 
 ## Nesting rule
 
-Spawning is governed by two tiers:
-
-**Tier 1 — Librarian (event-driven top-level coordinator)**
-Librarian may spawn any role including full orchestrators. It sits above the normal call hierarchy, activated only by lifecycle events. Because it is never called by another agent, it cannot create cycles.
-
-**Tier 2 — All other orchestrators (PO, Architect)**
-When a non-Librarian orchestrator calls another orchestrator, the callee runs in non-orchestrator mode and cannot spawn further. This caps that branch at depth 2.
+Only orchestrators (PO, Architect, Librarian) may spawn new processes. When one orchestrator calls another, the callee runs in non-orchestrator mode and cannot spawn further. This caps depth at 2.
 
 The caller enforces non-orchestrator mode by appending to the system prompt:
 
 ```bash
-ROLE_SKILL=$(cat .claude/skills/architect.md)
+ROLE_SKILL=$(cat .claude/skills/po.md)
 
 claude -p "..." \
   --system-prompt "${ROLE_SKILL}
@@ -218,31 +214,27 @@ claude -p "..." \
 You are running as a delegated agent. Do not spawn new claude processes."
 ```
 
+Librarian is event-driven and spawns only for documentation corrections — it does not advance workflow stages.
+
 Effective call graph:
 
 ```
 User
- └── Product Owner (orchestrator) ← requirements flow
-      ├── BA              (non-orchestrator)
-      └── Architect       (called as non-orchestrator)
-           └── [no further spawning]
+ └── Product Owner (orchestrator) ← requirements entry point
+      └── BA (non-orchestrator)
 
 User
- └── Architect (orchestrator) ← direct entry point
-      ├── Developer       (non-orchestrator)
-      ├── QA              (non-orchestrator)
-      └── BA              (non-orchestrator)
+ └── Architect (orchestrator) ← design + implementation entry point
+      ├── Developer  (non-orchestrator)
+      ├── QA         (non-orchestrator)
+      ├── PO         (non-orchestrator, UAT)
+      └── BA         (non-orchestrator, on uat-failed)
 
-[Event] ── requirements-ready / solution-ready / development-done / test-cases-ready
- └── Librarian (event-driven, tier-1 orchestrator)
-      ├── Architect       (full orchestrator)
-      │    ├── Developer  (non-orchestrator)
-      │    └── QA         (non-orchestrator)
-      └── Product Owner   (full orchestrator)
-           └── BA         (non-orchestrator)
+[Any event] → Librarian (doc-only orchestrator)
+      └── [role] (non-orchestrator, for documentation correction only)
 ```
 
-Max effective depth: Event → Librarian → Orchestrator → Non-orchestrator (3 levels, always bounded).
+Max effective depth: Orchestrator → Non-orchestrator (2 levels).
 
 # Orchestration
 
@@ -304,7 +296,7 @@ Summary: <what was produced>" \
   --system-prompt "$(cat .claude/skills/librarian.md)"
 ```
 
-Librarian processes the event, indexes new documents, and decides whether to advance the workflow.
+Librarian processes the event and indexes new documents.
 
 | Role | Event fired |
 |---|---|
@@ -362,7 +354,7 @@ Doctor defines the canonical "correctly installed" state. Install and upgrade bo
 | Check | Expected state | Owned by |
 |---|---|---|
 | Role skill files | `.claude/skills/{ba,architect,developer,qa,librarian}.md` exist | Plugin |
-| Doc folders | `docs/highlevel/`, `docs/internal/`, `docs/interface/`, `docs/templates/`, `team/kb/` exist | Plugin |
+| Doc folders | `docs/highlevel/`, `docs/internal/`, `docs/interface/`, `docs/templates/`, `team/kb/entries/` exist | Plugin |
 | `CLAUDE.md` block | `<!-- d-eng-team -->` block present and at current version | Plugin |
 | KB index | `team/kb/index.md` exists | Plugin (scaffold only) |
 | Document templates | One template per document type in `docs/templates/` | Plugin |
@@ -401,6 +393,7 @@ docs/
   interface/
 team/
   kb/
+    entries/           ← KB note dropbox (any role writes here)
     index.md           ← knowledge base index
 ```
 
